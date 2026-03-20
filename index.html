@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dr. Corvus Mort — Artificer Alchemist</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=IM+Fell+English:ital@0;1&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1008; --parchment: #f0e6c8; --aged: #c8aa80;
+    --rust: #8b3a1a; --brass: #b8860b; --verdigris: #2d6b5e;
+    --sepia: #6b4c2a; --blood: #7a1a1a; --purple: #5a3080;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0e0905;
+    font-family: 'IM Fell English', serif;
+    color: var(--ink);
+    padding: 30px 16px 60px;
+  }
+
+  .page {
+    max-width: 1000px; margin: 0 auto;
+    background: var(--parchment);
+    border: 3px solid var(--brass);
+    box-shadow: 0 0 0 7px var(--sepia), 0 0 0 10px var(--brass), 0 30px 80px rgba(0,0,0,0.9), inset 0 0 120px rgba(184,134,11,0.06);
+    position: relative; overflow: hidden;
+  }
+
+  /* ── SAVE INDICATOR ── */
+  #save-toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--verdigris); color: var(--parchment);
+    font-family: 'Special Elite', cursive; font-size: 0.75rem;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 8px 18px; border: 1px solid rgba(255,255,255,0.2);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    z-index: 9999;
+  }
+  #save-toast.show { opacity: 1; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--ink); padding: 28px 40px;
+    border-bottom: 4px solid var(--brass);
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 20px; align-items: center;
+  }
+  .char-name { font-family: 'Cinzel', serif; font-size: 2.5rem; font-weight: 900; color: var(--brass); letter-spacing: 0.04em; text-shadow: 0 0 40px rgba(184,134,11,0.25); }
+  .char-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .badge { font-family: 'Special Elite', cursive; font-size: 0.68rem; padding: 3px 10px; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 2px; color: var(--parchment); background: var(--rust); }
+  .badge.gold { background: var(--brass); color: var(--ink); }
+  .badge.green { background: var(--verdigris); }
+  .hdr-stat { text-align: center; padding: 10px 18px; border: 1px solid rgba(184,134,11,0.3); }
+  .hdr-stat .big { font-family: 'Cinzel', serif; font-size: 2.6rem; font-weight: 900; color: var(--brass); display: block; line-height: 1; }
+  .hdr-stat .lbl { font-family: 'Special Elite', cursive; font-size: 0.6rem; letter-spacing: 0.2em; color: var(--aged); text-transform: uppercase; }
+
+  /* ── SECTION LABEL ── */
+  .section-label { font-family: 'Cinzel', serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase; color: var(--rust); border-bottom: 1px solid var(--aged); padding-bottom: 4px; margin-bottom: 10px; }
+
+  /* ── LAYOUT ── */
+  .main-content { padding: 28px 36px; display: grid; grid-template-columns: 200px 1fr; gap: 28px; }
+  .left-col { display: flex; flex-direction: column; gap: 16px; }
+  .right-col { display: flex; flex-direction: column; gap: 20px; }
+  .panel { padding: 20px 36px; border-top: 1px solid var(--aged); }
+  .panel.dark { background: rgba(26,16,8,0.03); }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* ── STAT BLOCKS ── */
+  .stat-block { background: rgba(107,76,42,0.07); border: 1px solid var(--aged); border-left: 3px solid var(--brass); padding: 12px 13px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .mini-stat { text-align: center; padding: 7px 4px; border: 1px solid var(--aged); background: rgba(240,230,200,0.55); }
+  .mini-stat .v { font-family: 'Cinzel', serif; font-size: 1.35rem; font-weight: 700; color: var(--rust); display: block; line-height: 1; }
+  .mini-stat .l { font-family: 'Special Elite', cursive; font-size: 0.53rem; letter-spacing: 0.12em; color: var(--sepia); text-transform: uppercase; display: block; margin-top: 2px; }
+
+  /* ── HP EDITOR ── */
+  .hp-editor { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .hp-btn { width: 28px; height: 28px; background: var(--ink); color: var(--brass); border: 1px solid var(--brass); font-family: 'Cinzel', serif; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; transition: background 0.15s; }
+  .hp-btn:hover { background: var(--rust); }
+  .hp-current-wrap { flex: 1; text-align: center; }
+  .hp-current { font-family: 'Cinzel', serif; font-size: 1.6rem; font-weight: 900; color: var(--blood); background: transparent; border: none; border-bottom: 2px solid var(--rust); width: 60px; text-align: center; outline: none; cursor: pointer; }
+  .hp-current:focus { background: rgba(122,26,26,0.07); }
+  .hp-max-label { font-size: 0.6rem; font-family: 'Special Elite', cursive; color: var(--sepia); letter-spacing: 0.1em; }
+  .hp-bar-wrap { background: rgba(0,0,0,0.15); border: 1px solid var(--aged); height: 8px; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .hp-bar { height: 100%; background: linear-gradient(90deg, var(--rust), #d44); transition: width 0.4s; }
+
+  /* ── DEATH SAVES ── */
+  .death-saves { display: flex; flex-direction: column; gap: 7px; }
+  .save-row { display: flex; align-items: center; gap: 5px; }
+  .save-row .lbl { font-size: 0.58rem; font-family: 'Special Elite', cursive; letter-spacing: 0.1em; min-width: 55px; }
+
+  /* ── INTERACTIVE PIP ── */
+  .pip {
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 2px solid var(--sepia); display: inline-block;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .pip.s { border-color: var(--verdigris); }
+  .pip.f { border-color: var(--rust); }
+  .pip.s.filled { background: var(--verdigris); }
+  .pip.f.filled { background: var(--rust); }
+
+  /* ── CHECKBOX ── */
+  .icheck {
+    width: 15px; height: 15px; border: 2px solid var(--aged);
+    display: inline-block; cursor: pointer; flex-shrink: 0;
+    transition: background 0.15s; user-select: none;
+  }
+  .icheck.checked { background: var(--brass); border-color: var(--brass); }
+  .icheck.checked::after { content: '✓'; font-size: 10px; color: var(--ink); display: flex; align-items: center; justify-content: center; line-height: 13px; font-weight: bold; }
+  .check-row { display: flex; gap: 8px; align-items: center; margin: 3px 0; }
+  .check-label { font-family: 'Special Elite', cursive; font-size: 0.72rem; color: var(--sepia); }
+
+  /* ── CURRENCY ── */
+  .currency-box { border: 1px solid var(--brass); padding: 9px; background: rgba(184,134,11,0.06); font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 700; color: var(--brass); }
+  .currency-inner { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .curr-field { font-family: 'Cinzel', serif; font-size: 0.9rem; font-weight: 700; color: var(--brass); background: transparent; border: none; border-bottom: 1px solid var(--brass); width: 55px; text-align: center; outline: none; }
+  .curr-field:focus { background: rgba(184,134,11,0.08); }
+  .curr-label { font-size: 0.6rem; font-family: 'Special Elite', cursive; color: var(--aged); letter-spacing: 0.1em; }
+
+  /* ── ABILITIES ── */
+  .abilities-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .ability-card { border: 2px solid var(--brass); background: var(--ink); text-align: center; padding: 9px 4px 7px; }
+  .ability-card .name { font-family: 'Cinzel', serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.2em; color: var(--aged); }
+  .ability-card .score { font-family: 'Cinzel', serif; font-size: 1.8rem; font-weight: 900; color: var(--brass); display: block; margin: 2px 0; line-height: 1; }
+  .ability-card .ms { display: flex; justify-content: center; gap: 6px; font-size: 0.57rem; font-family: 'Special Elite', cursive; }
+  .ability-card .ms .m { color: var(--verdigris); }
+  .ability-card .ms .s2 { color: var(--rust); }
+
+  /* ── SKILLS ── */
+  .skills-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+  .skills-table tr { border-bottom: 1px solid rgba(107,76,42,0.13); }
+  .skills-table tr:hover { background: rgba(184,134,11,0.05); }
+  .skills-table td { padding: 3px; }
+  .skill-name { font-family: 'Special Elite', cursive; font-size: 0.68rem; color: var(--sepia); }
+  .skill-mod { font-family: 'Cinzel', serif; font-weight: 700; color: var(--ink); text-align: right; padding-right: 6px; }
+  .skill-mod.prof { color: var(--brass); }
+  .dot { font-size: 0.55rem; }
+  .dot.f { color: var(--aged); }
+  .dot.p { color: var(--brass); }
+
+  /* ── DIVIDER ── */
+  .divider { display: flex; align-items: center; gap: 10px; color: var(--aged); font-size: 0.6rem; letter-spacing: 0.28em; text-transform: uppercase; font-family: 'Special Elite', cursive; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--aged); }
+
+  /* ── WEAPONS ── */
+  .weapon-card { border: 1px solid var(--aged); border-left: 3px solid var(--rust); padding: 9px 11px; background: rgba(139,58,26,0.05); margin-bottom: 7px; }
+  .weapon-name { font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 700; color: var(--rust); }
+  .weapon-stats { display: flex; gap: 14px; margin-top: 3px; flex-wrap: wrap; }
+  .weapon-stat { font-size: 0.68rem; font-family: 'Special Elite', cursive; color: var(--sepia); }
+  .weapon-stat strong { color: var(--ink); }
+
+  /* ── ELIXIR ── */
+  .elixir-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+  .elixir-table th { font-family: 'Cinzel', serif; font-size: 0.6rem; background: var(--ink); color: var(--aged); padding: 5px 8px; text-align: left; letter-spacing: 0.1em; }
+  .elixir-table td { padding: 5px 8px; border-bottom: 1px solid rgba(107,76,42,0.15); font-family: 'Special Elite', cursive; color: var(--sepia); }
+  .elixir-table td:first-child { font-family: 'Cinzel', serif; font-weight: 700; color: var(--brass); text-align: center; }
+
+  /* ── INFUSIONS ── */
+  .infusion-card { border: 1px solid var(--verdigris); padding: 10px 12px; background: rgba(45,107,94,0.05); margin-bottom: 8px; }
+  .infusion-name { font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 700; color: var(--verdigris); }
+  .infusion-sub { font-size: 0.68rem; font-family: 'Special Elite', cursive; color: var(--sepia); margin-top: 4px; line-height: 1.5; }
+
+  /* ── FLUID TABLE ── */
+  .fluid-table { width: 100%; border-collapse: collapse; font-size: 0.68rem; margin-top: 6px; }
+  .fluid-table th { font-family: 'Cinzel', serif; font-size: 0.58rem; background: var(--ink); color: var(--aged); padding: 4px 8px; text-align: left; }
+  .fluid-table td { padding: 3px 8px; border-bottom: 1px solid rgba(107,76,42,0.12); font-family: 'Special Elite', cursive; color: var(--sepia); }
+
+  /* ── SPELLS ── */
+  .spell-meta-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 18px; }
+  .spell-meta-box { text-align: center; padding: 9px; border: 1px solid var(--verdigris); background: rgba(45,107,94,0.07); }
+  .spell-meta-box .v { font-family: 'Cinzel', serif; font-size: 0.9rem; font-weight: 700; color: var(--verdigris); display: block; }
+  .spell-meta-box .l { font-size: 0.58rem; font-family: 'Special Elite', cursive; letter-spacing: 0.1em; color: var(--sepia); text-transform: uppercase; }
+  .spell-level-label { font-family: 'Cinzel', serif; font-size: 0.62rem; font-weight: 700; color: var(--verdigris); letter-spacing: 0.2em; text-transform: uppercase; border-bottom: 1px solid rgba(45,107,94,0.35); padding-bottom: 3px; margin: 10px 0 6px; display: flex; justify-content: space-between; }
+  .spell-slots { font-family: 'Special Elite', cursive; font-size: 0.6rem; color: var(--aged); }
+  .spell-entry { font-size: 0.72rem; font-family: 'Special Elite', cursive; color: var(--sepia); padding: 2px 0 2px 10px; border-left: 2px solid transparent; line-height: 1.4; }
+  .spell-entry:hover { border-left-color: var(--verdigris); color: var(--ink); }
+  .spell-entry em { color: var(--brass); font-style: normal; }
+
+  /* ── INVENTORY ── */
+  .inv-list { list-style: none; font-size: 0.78rem; font-family: 'Special Elite', cursive; color: var(--sepia); line-height: 1.75; }
+  .inv-list li::before { content: '◆ '; color: var(--brass); font-size: 0.52rem; }
+
+  /* ── CRYSTAL ── */
+  .crystal-card { border: 1px solid rgba(100,60,140,0.4); background: rgba(60,20,80,0.04); padding: 12px 14px; margin-bottom: 10px; }
+  .crystal-name { font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 700; color: var(--purple); margin-bottom: 6px; }
+  .crystal-body { font-size: 0.72rem; font-family: 'Special Elite', cursive; color: var(--sepia); line-height: 1.6; }
+  .crystal-body .warn { color: var(--blood); }
+
+  /* ── NOTES TEXTAREA ── */
+  .notes-area {
+    width: 100%; min-height: 90px; resize: vertical;
+    background: rgba(240,230,200,0.4); border: 1px solid var(--aged);
+    font-family: 'Special Elite', cursive; font-size: 0.78rem;
+    color: var(--sepia); padding: 8px 10px; outline: none;
+    line-height: 1.6; margin-top: 6px;
+  }
+  .notes-area:focus { border-color: var(--brass); background: rgba(240,230,200,0.7); }
+  .notes-area::placeholder { color: var(--aged); font-style: italic; }
+
+  /* ── QUOTES ── */
+  .quotes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+  .quote-item { background: rgba(139,58,26,0.06); border: 1px solid rgba(139,58,26,0.2); padding: 7px 10px; font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.75rem; color: var(--sepia); }
+  .keywords { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .keyword { font-family: 'Special Elite', cursive; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--verdigris); border: 1px solid var(--verdigris); padding: 2px 8px; }
+  .backstory-text { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.86rem; color: var(--sepia); line-height: 1.8; border-left: 3px solid var(--brass); padding-left: 16px; margin: 12px 0; }
+
+  /* ── FOOTER ── */
+  .footer-bar { background: var(--ink); padding: 14px 36px; border-top: 3px solid var(--brass); }
+  .prof-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .prof-tag { font-family: 'Special Elite', cursive; font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--parchment); background: rgba(184,134,11,0.14); border: 1px solid rgba(184,134,11,0.3); padding: 3px 8px; }
+
+  /* ── RESET BUTTON ── */
+  .reset-btn { font-family: 'Special Elite', cursive; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--aged); background: transparent; border: 1px solid rgba(200,170,128,0.3); padding: 4px 10px; cursor: pointer; margin-left: 12px; transition: all 0.2s; }
+  .reset-btn:hover { border-color: var(--rust); color: var(--rust); }
+</style>
+</head>
+<body>
+
+<div id="save-toast">✓ Gespeichert</div>
+
+<div class="page">
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="header">
+    <div>
+      <div class="char-name">Dr. Corvus Mort</div>
+      <div class="char-meta">
+        <span class="badge">Kenku (small)</span>
+        <span class="badge gold">Artificer · Alchemist</span>
+        <span class="badge green">Level 3</span>
+        <span class="badge">Speed 30 ft.</span>
+      </div>
+    </div>
+    <div class="hdr-stat">
+      <span class="big">3</span><span class="lbl">Level</span>
+    </div>
+    <div class="hdr-stat">
+      <span class="big">+2</span><span class="lbl">Proficiency</span>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN GRID ═══ -->
+  <div class="main-content">
+
+    <div class="left-col">
+
+      <!-- HP -->
+      <div class="stat-block">
+        <div class="section-label">Hit Points</div>
+        <div class="hp-editor">
+          <div class="hp-btn" onclick="adjustHP(-1)">−</div>
+          <div class="hp-current-wrap">
+            <input class="hp-current" id="hp-current" type="number" value="18" min="0" max="30" oninput="updateHP()">
+            <div class="hp-max-label">/ 30 MAX</div>
+          </div>
+          <div class="hp-btn" onclick="adjustHP(1)">+</div>
+        </div>
+        <div class="hp-bar-wrap"><div class="hp-bar" id="hp-bar"></div></div>
+      </div>
+
+      <!-- DEFENSE -->
+      <div class="stat-block">
+        <div class="section-label">Defense & Movement</div>
+        <div class="grid2" style="margin-bottom:6px;">
+          <div class="mini-stat"><span class="v">14+DEX</span><span class="l">Armor Class</span></div>
+          <div class="mini-stat"><span class="v">d20+DEX</span><span class="l">Initiative</span></div>
+        </div>
+        <div class="mini-stat"><span class="v">30 ft.</span><span class="l">Speed</span></div>
+      </div>
+
+      <!-- DEATH SAVES -->
+      <div class="stat-block">
+        <div class="section-label">Death Saves</div>
+        <div class="death-saves">
+          <div class="save-row">
+            <span class="lbl" style="color:var(--verdigris)">SUCCESS</span>
+            <span class="pip s" data-key="ds-s1" onclick="togglePip(this)"></span>
+            <span class="pip s" data-key="ds-s2" onclick="togglePip(this)"></span>
+            <span class="pip s" data-key="ds-s3" onclick="togglePip(this)"></span>
+          </div>
+          <div class="save-row">
+            <span class="lbl" style="color:var(--rust)">FAILURE</span>
+            <span class="pip f" data-key="ds-f1" onclick="togglePip(this)"></span>
+            <span class="pip f" data-key="ds-f2" onclick="togglePip(this)"></span>
+            <span class="pip f" data-key="ds-f3" onclick="togglePip(this)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CURRENCY -->
+      <div class="currency-box">
+        <div class="section-label" style="margin-bottom:8px;">Currency</div>
+        <div class="currency-inner">
+          <div><input class="curr-field" id="curr-g" type="text" value="12.07" oninput="saveAll()"><div class="curr-label">GOLD</div></div>
+          <div><input class="curr-field" id="curr-s" type="text" value="7" oninput="saveAll()"><div class="curr-label">SILBER</div></div>
+          <div><input class="curr-field" id="curr-b" type="text" value="0" oninput="saveAll()"><div class="curr-label">BRONZE</div></div>
+        </div>
+      </div>
+
+      <!-- SPECIALS -->
+      <div class="stat-block" style="border-left-color:var(--brass);">
+        <div class="section-label">Specials</div>
+        <div style="font-size:0.7rem; font-family:'Special Elite',cursive; color:var(--sepia); line-height:1.8;">
+          <strong style="color:var(--brass);">Inspiration:</strong> 1× (reroll)<br>
+          <strong style="color:var(--brass);">Kenku Recall:</strong> 1× per long rest<br>
+          <strong style="color:var(--brass);">Mimicry:</strong> Copy voices<br>
+          <strong style="color:var(--brass);">Expert Duplication</strong><br>
+          <strong style="color:var(--brass);">Resistenter Magen</strong>
+        </div>
+      </div>
+
+      <!-- PASSIVE SENSES -->
+      <div class="stat-block">
+        <div class="section-label">Passive Senses</div>
+        <table style="width:100%; font-size:0.7rem; font-family:'Special Elite',cursive; color:var(--sepia);">
+          <tr><td>Dark Vision</td><td style="color:var(--ink); text-align:right;">—</td></tr>
+          <tr><td>Perception</td><td style="color:var(--ink); text-align:right;">—</td></tr>
+          <tr><td>Insight</td><td style="color:var(--ink); text-align:right;">—</td></tr>
+          <tr><td>Investigation</td><td style="color:var(--ink); text-align:right;">—</td></tr>
+        </table>
+      </div>
+
+    </div><!-- /left-col -->
+
+    <div class="right-col">
+
+      <!-- ABILITIES -->
+      <div>
+        <div class="section-label">Ability Scores</div>
+        <div class="abilities-grid">
+          <div class="ability-card"><div class="name">STR</div><span class="score">8</span><div class="ms"><span class="m">–1</span><span class="s2">–1</span></div></div>
+          <div class="ability-card"><div class="name">DEX</div><span class="score">13</span><div class="ms"><span class="m">+1</span><span class="s2">+1</span></div></div>
+          <div class="ability-card"><div class="name">CON</div><span class="score">16</span><div class="ms"><span class="m">+3</span><span class="s2">+5</span></div></div>
+          <div class="ability-card"><div class="name">INT</div><span class="score">17</span><div class="ms"><span class="m">+3</span><span class="s2">+5</span></div></div>
+          <div class="ability-card"><div class="name">WIS</div><span class="score">12</span><div class="ms"><span class="m">+1</span><span class="s2">+1</span></div></div>
+          <div class="ability-card"><div class="name">CHA</div><span class="score">8</span><div class="ms"><span class="m">–1</span><span class="s2">–1</span></div></div>
+        </div>
+        <div style="display:flex; gap:16px; margin-top:6px; font-size:0.6rem; font-family:'Special Elite',cursive; color:var(--aged);">
+          <span style="color:var(--verdigris);">■ MOD</span><span style="color:var(--rust);">■ SAVE</span>
+        </div>
+      </div>
+
+      <!-- SKILLS -->
+      <div>
+        <div class="section-label">Skills</div>
+        <table class="skills-table">
+          <tr><td class="dot f">○</td><td class="skill-name">Acrobatics (DEX)</td><td class="skill-mod">+1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Animal Handling (WIS)</td><td class="skill-mod">+1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Arcana (INT)</td><td class="skill-mod">+3</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Athletics (STR)</td><td class="skill-mod">–1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Deception (CHA)</td><td class="skill-mod">–1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">History (INT)</td><td class="skill-mod">+3</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Insight (WIS)</td><td class="skill-mod">+1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Intimidation (CHA)</td><td class="skill-mod">–1</td></tr>
+          <tr><td class="dot p">●</td><td class="skill-name">Investigation (INT)</td><td class="skill-mod prof">+5</td></tr>
+          <tr><td class="dot p">●</td><td class="skill-name">Medicine (WIS)</td><td class="skill-mod prof">+5</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Nature (INT)</td><td class="skill-mod">+3</td></tr>
+          <tr><td class="dot p">●</td><td class="skill-name">Perception (WIS)</td><td class="skill-mod prof">+3</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Performance (CHA)</td><td class="skill-mod">–1</td></tr>
+          <tr><td class="dot p">●</td><td class="skill-name">Persuasion (CHA)</td><td class="skill-mod prof">+1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Religion (INT)</td><td class="skill-mod">+3</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Sleight of Hand (DEX)</td><td class="skill-mod">+1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Stealth (DEX)</td><td class="skill-mod">+1</td></tr>
+          <tr><td class="dot f">○</td><td class="skill-name">Survival (WIS)</td><td class="skill-mod">+1</td></tr>
+        </table>
+      </div>
+
+    </div><!-- /right-col -->
+  </div><!-- /main-content -->
+
+  <!-- ═══ WEAPONS & ELIXIR ═══ -->
+  <div class="panel">
+    <div class="two-col">
+      <div>
+        <div class="section-label">⚔️ Weapons</div>
+
+        <div class="weapon-card">
+          <div class="weapon-name">💉 Spritze</div>
+          <div class="weapon-stats">
+            <div class="weapon-stat">Hit: <strong>1d20+DEX+PROF</strong></div>
+            <div class="weapon-stat">Dmg: <strong>1d4+D · Piercing</strong></div>
+          </div>
+          <div style="margin-top:6px;">
+            <div class="check-row"><span class="icheck" data-key="spritze-c1" onclick="toggleCheck(this)"></span><span class="check-label">Charge 1</span></div>
+            <div class="check-row"><span class="icheck" data-key="spritze-c2" onclick="toggleCheck(this)"></span><span class="check-label">Charge 2</span></div>
+            <div class="check-row"><span class="icheck" data-key="spritze-c3" onclick="toggleCheck(this)"></span><span class="check-label">Charge 3</span></div>
+            <div style="margin-top:5px; font-size:0.66rem; font-family:'Special Elite',cursive; color:var(--sepia);">Consume: Heal 1d8+INT + wild magic surge. Bonus action after attack.</div>
+          </div>
+        </div>
+
+        <div class="weapon-card">
+          <div class="weapon-name">🗡️ Dagger</div>
+          <div class="weapon-stats">
+            <div class="weapon-stat">Hit: <strong>1d20+DEX+PROF</strong></div>
+            <div class="weapon-stat">Dmg: <strong>1d4 · Piercing</strong></div>
+            <div class="weapon-stat">Range: <strong>80/320 ft.</strong></div>
+          </div>
+        </div>
+
+        <div class="weapon-card">
+          <div class="weapon-name">🏹 Light Crossbow</div>
+          <div class="weapon-stats">
+            <div class="weapon-stat">Hit: <strong>1d20+DEX+PROF</strong></div>
+            <div class="weapon-stat">Dmg: <strong>1d8+D · Piercing</strong></div>
+            <div class="weapon-stat">Range: <strong>80/320 ft.</strong></div>
+          </div>
+        </div>
+        <div style="font-size:0.72rem; font-family:'Special Elite',cursive; color:var(--sepia); margin-top:6px;"><strong style="color:var(--rust);">Ammo:</strong> Bolts — 20×</div>
+      </div>
+
+      <div>
+        <div class="section-label">🧪 Experimental Elixir</div>
+        <div class="check-row" style="margin-bottom:10px;">
+          <span class="icheck" data-key="elixir-used" onclick="toggleCheck(this)"></span>
+          <span class="check-label">Used this long rest (or spend 1 lvl 1 spell slot for more)</span>
+        </div>
+        <table class="elixir-table">
+          <tr><th>d6</th><th>Effect</th></tr>
+          <tr><td>1</td><td>Healing — 2d4 + INT mod HP</td></tr>
+          <tr><td>2</td><td>Swiftness — +10 ft. speed for 1 hour</td></tr>
+          <tr><td>3</td><td>Resilience — +1 AC for 10 minutes</td></tr>
+          <tr><td>4</td><td>Boldness — d4 added to all attack rolls & saves for 1 min.</td></tr>
+          <tr><td>5</td><td>Flight — flying speed 10 ft. for 10 min.</td></tr>
+          <tr><td>6</td><td>Transformation — Alter Self for 10 min.</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INFUSIONEN ═══ -->
+  <div class="panel dark">
+    <div class="divider" style="margin-bottom:16px;">⚙ Infusionen ⚙</div>
+    <div style="font-size:0.7rem; font-family:'Special Elite',cursive; color:var(--sepia); margin-bottom:12px;">
+      <strong style="color:var(--brass);">Bekannt: [4]</strong> &nbsp;|&nbsp; <strong style="color:var(--rust);">Ausgerüstet: [2]</strong>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="infusion-card">
+          <div class="infusion-name">✅ Alchemy Jug <em style="font-size:0.7rem;color:var(--sepia);">(Krug · 1 gallon = 3,8L)</em></div>
+          <div class="infusion-sub">
+            <div class="check-row"><span class="icheck checked" data-key="jug-c1" onclick="toggleCheck(this)"></span><span class="check-label">Charge 1 — 15 Liter Schleimaal-Öl</span></div>
+          </div>
+          <table class="fluid-table" style="margin-top:8px;">
+            <tr><th>Fluid</th><th>Amount</th></tr>
+            <tr><td>Acid</td><td>8 oz</td></tr>
+            <tr><td>Basic Poison</td><td>½ oz</td></tr>
+            <tr><td>Beer</td><td>4 gallons</td></tr>
+            <tr><td>Honey / Mayonnaise</td><td>1 / 2 gallons</td></tr>
+            <tr><td>Oil</td><td>1 quart</td></tr>
+            <tr><td>Water fresh / salt</td><td>8 / 12 gallons</td></tr>
+            <tr><td>Wine</td><td>1 gallon</td></tr>
+          </table>
+        </div>
+        <div class="infusion-card">
+          <div class="infusion-name">✅ Wand of Magic Detection <em style="font-size:0.7rem;color:var(--sepia);">(3 Rattenaugen)</em></div>
+          <div class="infusion-sub">
+            <div class="check-row"><span class="icheck" data-key="wand-c1" onclick="toggleCheck(this)"></span><span class="check-label">Charge 1</span></div>
+            <div class="check-row"><span class="icheck" data-key="wand-c2" onclick="toggleCheck(this)"></span><span class="check-label">Charge 2</span></div>
+            <div class="check-row"><span class="icheck" data-key="wand-c3" onclick="toggleCheck(this)"></span><span class="check-label">Charge 3</span></div>
+            <div style="margin-top:4px;">Regains 1d3 charges daily at dawn.</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="infusion-card" style="opacity:0.55;">
+          <div class="infusion-name">☐ Rope of Climbing <em style="font-size:0.7rem;">(Tentakel)</em></div>
+          <div class="infusion-sub">Not currently equipped.</div>
+        </div>
+        <div class="infusion-card" style="opacity:0.55;">
+          <div class="infusion-name">☐ Cap of Water Breathing <em style="font-size:0.7rem;">(Lungenflügel)</em></div>
+          <div class="infusion-sub">Not currently equipped.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SPELLS ═══ -->
+  <div class="panel">
+    <div class="divider" style="margin-bottom:16px;">⚗ Spell Casting ⚗</div>
+    <div class="spell-meta-row">
+      <div class="spell-meta-box"><span class="v">INT</span><span class="l">Casting Ability</span></div>
+      <div class="spell-meta-box"><span class="v">8 + prof + INT</span><span class="l">Spell Save DC</span></div>
+      <div class="spell-meta-box"><span class="v">prof + INT</span><span class="l">Attack Bonus</span></div>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="spell-level-label">Cantrips</div>
+        <div class="spell-entry">Fire Bolt — 1d10, 120 ft. <em>[Flasche mit Feuer]</em></div>
+        <div class="spell-entry">Guidance — ability check + 1d4 <em>[Tabletten]</em></div>
+        <div class="spell-level-label"><span>Level 1</span><span class="spell-slots">3 slots / 0 expanded</span></div>
+        <div class="spell-entry">Snare — 5ft radius, INT ST vs SpellSave, DEX ST</div>
+        <div class="spell-entry">Grease — 6ft 1min 10ft sq., DEX ST → prone <em>[Schleimaal-Öl]</em></div>
+        <div class="spell-entry">Purify Food and Drink — 10ft</div>
+        <div class="spell-entry">Catapult — 5 lbs, 60 ft., 3d8, DEX ST <em>[Ampulle → Luftstoß]</em></div>
+        <div class="spell-entry">Faerie Fire — 6ft 20ftcube, DEX ST → adv on attacks</div>
+      </div>
+      <div>
+        <div class="spell-level-label">Level 1 — Alchemist (on level up)</div>
+        <div class="spell-entry">* Healing Word — 1d4, 6ft, bonus action</div>
+        <div class="spell-entry">* Ray of Sickness — 2d8, 6ft, CON ST → poisoned</div>
+        <div class="spell-level-label">No-Slot Spells</div>
+        <div class="spell-entry">Tasha's Caustic Brew — C 1 min., 2d4, 30×5 ft.</div>
+        <div class="spell-entry">Absorb Elements — reaction, resistance, next melee</div>
+        <div class="spell-entry">Cure Wounds — 1d8 + INT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INVENTORY ═══ -->
+  <div class="panel dark">
+    <div class="divider" style="margin-bottom:16px;">🎒 Inventar 🎒</div>
+    <div class="three-col">
+      <div>
+        <div class="section-label">Tools & Kits</div>
+        <ul class="inv-list">
+          <li>Herbalism Kit</li><li>Thieves' Tools</li><li>Tinker's Tools</li>
+          <li>Alchemist's Supplies *</li><li>Dungeoneer's Pack</li>
+        </ul>
+        <div class="section-label" style="margin-top:14px;">Dokumente</div>
+        <ul class="inv-list">
+          <li>Doktortitel</li><li>Auftragsschreiben (f.d. Uni)</li>
+          <li>Lappen im Fläschchen (Blut)</li>
+          <li>(Fake-) Rezept: Potenzmittel</li>
+          <li>Potion Buch</li>
+        </ul>
+      </div>
+      <div>
+        <div class="section-label">Waffen & Rüstung</div>
+        <ul class="inv-list">
+          <li>Scale mail</li><li>Adlige Umbral Kleidung & Mantel</li>
+          <li>Rötliche Ebenhall Rüstung (Dalia)</li>
+          <li>Mechanische Klinge (Butler Galius)</li>
+          <li>Schwertgriff mit Fluch [mag. Beutel]</li>
+          <li>Übergroße Nadel · Bronzene Brille</li>
+        </ul>
+        <div class="section-label" style="margin-top:14px;">Heilung & Alchemie</div>
+        <ul class="inv-list">
+          <li>Basic Poison Potion · Heiltrank</li>
+          <li>Hautlappen von Gestaltwandler</li>
+          <li>Blutproben: Hektor, Morvina, Ratte, Oktopus, Shoosuva</li>
+          <li>Heilkräuter · Öl-Flasche</li>
+        </ul>
+      </div>
+      <div>
+        <div class="section-label">Sonstiges</div>
+        <ul class="inv-list">
+          <li>Grüner Orb (Hargreif)</li><li>Bündel Katzenhaare</li>
+          <li>Schwarze Kristalle (Astrale Pest)</li>
+          <li>Dunkle Kristallsplitter — <strong>12×</strong></li>
+          <li>2 Flaschen Schleimaal</li>
+          <li>Siegberts Kopf</li><li>Magischer Pilz (2×)</li>
+        </ul>
+        <div class="section-label" style="margin-top:14px;">📝 Notizen</div>
+        <textarea class="notes-area" id="notes-inventory" placeholder="Notizen zum Inventar…" oninput="saveAll()"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CRYSTAL RECIPES ═══ -->
+  <div class="panel">
+    <div class="divider" style="margin-bottom:16px;">🔮 Kristallsplitter Rezepte 🔮</div>
+    <div class="three-col">
+      <div class="crystal-card">
+        <div class="crystal-name">🔹 Schwarzes Riechsalz</div>
+        <div class="crystal-body"><strong>Herstellung:</strong> Pulverisierter Kristall + Salz<br><br><strong>Effekt:</strong> Regeneriere einen Stufe 1 Spell-Slot.<br><br><span class="warn"><strong>Nebenwirkung:</strong> 1d6 Necrotic × Anzahl (Reset long rest).</span></div>
+      </div>
+      <div class="crystal-card">
+        <div class="crystal-name">🔹 Trank der Flammen</div>
+        <div class="crystal-body"><strong>Herstellung:</strong> Kristall + entzündbare Flüssigkeit<br><br><strong>Effekt:</strong> Feuerimmunität für 2 min.<br><br><span class="warn"><strong>Nebenwirkung:</strong> Danach fängst du an zu brennen.</span></div>
+      </div>
+      <div class="crystal-card">
+        <div class="crystal-name">🔹 Splitter der kontrollierten Wut</div>
+        <div class="crystal-body"><strong>Herstellung:</strong> Splitter in den Körper<br><br><strong>Effekt:</strong> +2 AC, Saves & Attacks für 1 min.<br><br><span class="warn"><strong>Nebenwirkung:</strong> CON DC 15 oder Erschöpfung 1.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ NOTES & BACKSTORY ═══ -->
+  <div class="panel dark">
+    <div class="divider" style="margin-bottom:16px;">📖 Geschichte & Notes 📖</div>
+    <div class="two-col">
+      <div>
+        <div class="section-label">Backstory</div>
+        <div class="backstory-text">
+          Dr. Corvus Mort — ein selbsternannter Arzt, der einer mysteriösen Krankheit auf der Spur ist: <strong>"die Schwarze Wut"</strong> (Astrale Pest). Cousin: <em>Rigor Mort</em> (Entdecker der Todenstarre).
+        </div>
+        <div class="section-label" style="margin-top:12px;">Session Notes</div>
+        <textarea class="notes-area" id="notes-session" placeholder="Was ist zuletzt passiert? Offene Fäden, NPCs…" oninput="saveAll()" style="min-height:120px;"></textarea>
+        <div class="section-label" style="margin-top:12px;">Sonstiges</div>
+        <textarea class="notes-area" id="notes-misc" placeholder="Freie Notizen…" oninput="saveAll()"></textarea>
+      </div>
+      <div>
+        <div class="section-label">Catchphrases</div>
+        <div class="quotes-grid">
+          <div class="quote-item">Ja, ja, das wird wirken!</div>
+          <div class="quote-item">Ja, ja, das bringt Heilung!</div>
+          <div class="quote-item">Neiiin, ein Tropfen zu viel…</div>
+          <div class="quote-item">Neiiin, ein falscher Trank…</div>
+          <div class="quote-item">Das riecht nach Krankheit… und nach Gelegenheit.</div>
+          <div class="quote-item">Vertraue dem Trank, nicht den Symptomen!</div>
+          <div class="quote-item" style="grid-column:1/-1;">Keine Sorge, das Brennen bedeutet, dass es wirkt.</div>
+        </div>
+        <div class="keywords" style="margin-top:14px;">
+          <span class="keyword">Gebräu</span><span class="keyword">Destillat</span>
+          <span class="keyword">Tinktur</span><span class="keyword">Essenz</span>
+          <span class="keyword">Mixtur</span><span class="keyword">Arkanum</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <div class="footer-bar">
+    <div style="display:flex; align-items:center;">
+      <div class="section-label" style="color:var(--aged); border-color:rgba(200,170,128,0.3); margin-bottom:0;">Proficiencies</div>
+      <button class="reset-btn" onclick="confirmReset()">↺ Long Rest Reset</button>
+    </div>
+    <div class="prof-list">
+      <span class="prof-tag">Light Armor</span><span class="prof-tag">Medium Armor</span>
+      <span class="prof-tag">Shields</span><span class="prof-tag">Simple Weapons</span>
+      <span class="prof-tag">Firearms</span><span class="prof-tag">Thieves' Tools</span>
+      <span class="prof-tag">Herbalism Kit</span><span class="prof-tag">Tinker's Tools</span>
+      <span class="prof-tag">Alchemist's Supplies</span>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  const STORAGE_KEY = 'corvus-mort-sheet';
+
+  // ── HELPERS ──────────────────────────────────────────
+  function showToast() {
+    const t = document.getElementById('save-toast');
+    t.classList.add('show');
+    clearTimeout(t._timeout);
+    t._timeout = setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  function saveAll() {
+    const data = {};
+
+    // HP
+    data.hp = document.getElementById('hp-current').value;
+
+    // Currency
+    data.currG = document.getElementById('curr-g').value;
+    data.currS = document.getElementById('curr-s').value;
+    data.currB = document.getElementById('curr-b').value;
+
+    // Notes
+    data.notesInventory = document.getElementById('notes-inventory').value;
+    data.notesSession   = document.getElementById('notes-session').value;
+    data.notesMisc      = document.getElementById('notes-misc').value;
+
+    // Pips
+    document.querySelectorAll('.pip[data-key]').forEach(el => {
+      data[el.dataset.key] = el.classList.contains('filled');
+    });
+
+    // Checkboxes
+    document.querySelectorAll('.icheck[data-key]').forEach(el => {
+      data[el.dataset.key] = el.classList.contains('checked');
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showToast();
+  }
+
+  function loadAll() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+
+    if (data.hp !== undefined) {
+      document.getElementById('hp-current').value = data.hp;
+      updateHP(false);
+    }
+
+    if (data.currG !== undefined) document.getElementById('curr-g').value = data.currG;
+    if (data.currS !== undefined) document.getElementById('curr-s').value = data.currS;
+    if (data.currB !== undefined) document.getElementById('curr-b').value = data.currB;
+
+    if (data.notesInventory !== undefined) document.getElementById('notes-inventory').value = data.notesInventory;
+    if (data.notesSession   !== undefined) document.getElementById('notes-session').value   = data.notesSession;
+    if (data.notesMisc      !== undefined) document.getElementById('notes-misc').value       = data.notesMisc;
+
+    document.querySelectorAll('.pip[data-key]').forEach(el => {
+      if (data[el.dataset.key]) el.classList.add('filled');
+      else el.classList.remove('filled');
+    });
+
+    document.querySelectorAll('.icheck[data-key]').forEach(el => {
+      if (data[el.dataset.key]) el.classList.add('checked');
+      else el.classList.remove('checked');
+    });
+  }
+
+  // ── HP ───────────────────────────────────────────────
+  function updateHP(doSave = true) {
+    const input = document.getElementById('hp-current');
+    const bar   = document.getElementById('hp-bar');
+    let val = parseInt(input.value) || 0;
+    val = Math.max(0, Math.min(30, val));
+    input.value = val;
+    bar.style.width = (val / 30 * 100) + '%';
+    bar.style.background = val <= 8
+      ? 'linear-gradient(90deg, #5a0000, #a00)'
+      : val <= 15
+        ? 'linear-gradient(90deg, var(--rust), #e06030)'
+        : 'linear-gradient(90deg, var(--rust), #d44)';
+    if (doSave) saveAll();
+  }
+
+  function adjustHP(delta) {
+    const input = document.getElementById('hp-current');
+    input.value = (parseInt(input.value) || 0) + delta;
+    updateHP();
+  }
+
+  // ── TOGGLES ──────────────────────────────────────────
+  function togglePip(el) {
+    el.classList.toggle('filled');
+    saveAll();
+  }
+
+  function toggleCheck(el) {
+    el.classList.toggle('checked');
+    saveAll();
+  }
+
+  // ── LONG REST RESET ──────────────────────────────────
+  function confirmReset() {
+    if (!confirm('Long Rest: Reset HP to 30, Spritze charges, Elixir, Wand charges & Death Saves?')) return;
+
+    // HP to max
+    document.getElementById('hp-current').value = 30;
+    updateHP(false);
+
+    // Death saves
+    document.querySelectorAll('.pip').forEach(el => el.classList.remove('filled'));
+
+    // Spritze charges
+    ['spritze-c1','spritze-c2','spritze-c3'].forEach(k => {
+      const el = document.querySelector(`[data-key="${k}"]`);
+      if (el) el.classList.remove('checked');
+    });
+
+    // Elixir
+    const elixir = document.querySelector('[data-key="elixir-used"]');
+    if (elixir) elixir.classList.remove('checked');
+
+    // Wand charges — reset to full (all unchecked = available)
+    ['wand-c1','wand-c2','wand-c3'].forEach(k => {
+      const el = document.querySelector(`[data-key="${k}"]`);
+      if (el) el.classList.remove('checked');
+    });
+
+    saveAll();
+  }
+
+  // ── INIT ─────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    loadAll();
+    updateHP(false);
+  });
+</script>
+</body>
+</html>
